@@ -45,7 +45,7 @@ edge_threshold = st.sidebar.slider("Heuristic Structural Filters", 50, 300, (100
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("<h3 style='font-size: 1rem; color: #00ff66;'>📟 TELEMETRY STATUS</h3>", unsafe_allow_html=True)
-st.sidebar.code("SYSTEM: ACTIVE\nENGINE: CPU_OPTIMIZED\nPORT: LOCAL_HOST")
+st.sidebar.code("SYSTEM: ACTIVE\nENGINE: CPU_OPTIMIZED\nPORT: CLOUD_HOST")
 
 # 4. Image Input Link
 uploaded_file = st.file_uploader("📂 INITIALIZE SECURE TELEMETRY UPLOAD STREAM", type=["jpg", "jpeg", "png"])
@@ -90,16 +90,26 @@ if raw_img is not None:
         results = model("temp_uploaded_recon.jpg", device='cpu', conf=confidence_slider, imgsz=80)
         annotated_frame = results[0].plot()
         
-        # Line 92 - Fully fixed color channel conversion split safely
         rgb_annotated = cv2.cvtColor(
             annotated_frame, 
             cv2.COLOR_BGR2RGB
         )
+        # Renders boxes around EVERYTHING detected
         st.image(rgb_annotated, caption="Neural Target Recognition Overlay", width=380)
         
-        detected_boxes = len(results[0].boxes)
-        if detected_boxes > 0:
-            st.markdown(f"<div style='background-color: #450a0a; border: 1px solid #ef4444; padding: 10px; border-radius: 4px; color: #f87171; font-weight: bold;'>🚨 ALARM: POSITIVE THREAT ATTRIBUTES REGISTERED ({detected_boxes} Target Assets)</div>", unsafe_allow_html=True)
+        # Extract numeric class mapping for all objects present in the current frame
+        detected_classes = [int(box.cls[0]) for box in results[0].boxes]
+        
+        # Target Defense Signatures from COCO Dataset:
+        # 2 = car, 4 = airplane, 7 = truck, 8 = boat
+        defense_classes = {2, 4, 7, 8}
+        
+        # Filter down to catch active tactical matches
+        active_threats = [cls for cls in detected_classes if cls in defense_classes]
+        
+        # Smart Alert Gate Routing
+        if len(active_threats) > 0:
+            st.markdown(f"<div style='background-color: #450a0a; border: 1px solid #ef4444; padding: 10px; border-radius: 4px; color: #f87171; font-weight: bold;'>🚨 ALARM: POSITIVE THREAT ATTRIBUTES REGISTERED ({len(active_threats)} Target Assets)</div>", unsafe_allow_html=True)
         else:
             st.markdown("<div style='background-color: #172554; border: 1px solid #3b82f6; padding: 10px; border-radius: 4px; color: #60a5fa;'>ℹ️ READOUT: FEED STABLE // Signature Matches Baseline Parameters</div>", unsafe_allow_html=True)
 
