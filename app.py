@@ -12,15 +12,17 @@ st.markdown(
     <h1 style='font-family: "Courier New", Courier, monospace; font-weight: 800; color: #00e5ff; letter-spacing: 2px; text-align: center;'>
         project <span style='font-variant: small-caps; font-size: 1.1em;'>aegis</span>
     </h1>
-    """, 
+    """,
     unsafe_allow_html=True
 )
+
 
 # 2. Load the Weights Safely into Memory
 @st.cache_resource
 def load_military_model():
     # Points directly to the file downloaded into your folder
     return YOLO("military_model.pt")
+
 
 model = load_military_model()
 
@@ -45,19 +47,19 @@ if uploaded_file is not None:
     # Convert uploaded data into matrix-readable array (RGB)
     image = Image.open(uploaded_file)
     img_array = np.array(image)
-    
+
     # 🔥 COLOR REVERSE INTERPOLATION: Convert RGB to BGR for the YOLO engine calculations
     bgr_img = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-    
+
     st.subheader("📡 Core Live Feed Processing Matrix")
-    
+
     # Run active inference engine using the corrected BGR frame
     with st.spinner("Analyzing target frames..."):
         results = model.predict(source=bgr_img, conf=conf_threshold)
-        
+
         # Convert the bounding-box frame back to RGB so Streamlit colors render normally
         annotated_img = cv2.cvtColor(results[0].plot(), cv2.COLOR_BGR2RGB)
-        
+
     # Present the processed outputs side-by-side
     col1, col2 = st.columns(2)
     with col1:
