@@ -22,6 +22,7 @@ st.markdown("""
             background-color: var(--bg-dark);
             color: white;
             font-family: var(--font-family);
+            overscroll-behavior-y: contain; /* 🔥 FIX: Stops mobile browsers from refreshing on scroll-up */
         }
         #MainMenu, header, footer {visibility: hidden;}
         h1 {
@@ -113,7 +114,7 @@ with st.sidebar:
     st.write("GPU UTIL: <span class='success-text'>0% (LOCAL)</span>", unsafe_allow_html=True)
     st.markdown("---")
 
-    conf_threshold = st.slider("TRACKING SENSITIVITY", 0.05, 1.00, 0.20, step=0.05)
+    conf_threshold = st.sidebar.slider("TRACKING SENSITIVITY", 0.05, 1.00, 0.20, step=0.05)
     st.markdown("---")
     if st.button("ACTIVATE COUNTERMEASURES"):
         st.error("CMD ACCEPTED: COUNTERMEASURES INITIATED.")
@@ -138,7 +139,6 @@ with col_main:
             detected_count = len(results[0].boxes.data.tolist())
             annotated_img = cv2.cvtColor(results[0].plot(), cv2.COLOR_BGR2RGB)
 
-        # 🔥 FIX: Changed use_column_width to use_container_width to remove the warnings
         st.image(annotated_img, caption="Processed Network Tracking Out", use_container_width=True)
 
         if detected_count > 0:
