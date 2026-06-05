@@ -1,145 +1,66 @@
 import streamlit as st
-import cv2
-import numpy as np
-import os
 from ultralytics import YOLO
+from PIL import Image
+import numpy as np
+import cv2
 
-# 1. Page Configuration & Stealth Theme Setup
-st.set_page_config(layout="wide", page_title="Project Aegis - Tactical Center")
+# 1. Page Configuration & Custom small-caps Styling
+st.set_page_config(page_title="project aegis", layout="wide")
 
-# Native CSS Injection to overwrite default colors to an industrial dark mode
-st.markdown("""
-    <style>
-    .stApp {
-        background-color: #050811;
-        color: #e2e8f0;
-    }
-    section[data-testid="stSidebar"] {
-        background-color: #02040a !important;
-        border-right: 2px solid #00e5ff;
-    }
-    div[data-testid="stMetricValue"] {
-        color: #00ff66 !important;
-        font-family: 'Courier New', monospace;
-    }
-    h1, h2, h3 {
-        color: #00e5ff !important;
-        font-family: 'Segoe UI', sans-serif;
-    }
-    div[data-testid="stFileUploader"] {
-        border: 2px dashed #00e5ff;
-        background-color: #0b0f19;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.markdown(
+    """
+    <h1 style='font-family: "Courier New", Courier, monospace; font-weight: 800; color: #00e5ff; letter-spacing: 2px; text-align: center;'>
+        project <span style='font-variant: small-caps; font-size: 1.1em;'>aegis</span>
+    </h1>
+    """, 
+    unsafe_allow_html=True
+)
 
-# 2. Command Header
-st.title("⚡ AEGIS: TACTICAL RECONNAISSANCE INTERFACE")
-st.markdown("<p style='color: #64748b; font-size: 1.1rem; margin-top: -15px;'>Local Hardware Engine // Sensor Fusion & Neural Inference Benchmarking</p>", unsafe_allow_html=True)
-st.markdown("---")
+# 2. Load the Weights Safely into Memory
+@st.cache_resource
+def load_military_model():
+    # Points directly to the file downloaded into your folder
+    return YOLO("military_model.pt")
 
-# 3. Sidebar Panel
-st.sidebar.markdown("<h2 style='font-size: 1.2rem; color: #00e5ff;'>🛰️ CONTROL MATRIX</h2>", unsafe_allow_html=True)
-confidence_slider = st.sidebar.slider("AI Neural Gate (Sensitivity)", 0.05, 1.0, 0.15)
-edge_threshold = st.sidebar.slider("Heuristic Structural Filters", 50, 300, (100, 200))
+model = load_military_model()
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("<h3 style='font-size: 1rem; color: #00ff66;'>📟 TELEMETRY STATUS</h3>", unsafe_allow_html=True)
-st.sidebar.code("SYSTEM: ACTIVE\nENGINE: CPU_OPTIMIZED\nPORT: CLOUD_HOST")
+# 3. Sidebar UI Panel Design
+st.sidebar.markdown(
+    """
+    <div style='border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-bottom: 20px;'>
+        <h3 style='font-family: "Courier New", Courier, monospace; color: #94a3b8; margin: 0; font-size: 1.1rem;'>
+            control_panel // <span style='font-variant: small-caps; color: #00e5ff;'>aegis_core</span>
+        </h3>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-# 4. Image Input Link
-uploaded_file = st.file_uploader("📂 INITIALIZE SECURE TELEMETRY UPLOAD STREAM", type=["jpg", "jpeg", "png"])
+conf_threshold = st.sidebar.slider("Target Confidence Cutoff", 0.10, 1.00, 0.25, step=0.05)
 
-raw_img = None
-threat_folder = "data/train/threat"
+# 4. Target Asset Data Ingestion
+uploaded_file = st.file_uploader("Ingest Target Telemetry Imagery...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-    raw_img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-elif os.path.exists(threat_folder) and len(os.listdir(threat_folder)) > 0:
-    all_images = os.listdir(threat_folder)
-    raw_img = cv2.imread(os.path.join(threat_folder, all_images[0]))
-
-# 5. Core Analytical Panels
-if raw_img is not None:
+    # Convert uploaded data into matrix-readable array (RGB)
+    image = Image.open(uploaded_file)
+    img_array = np.array(image)
+    
+    # 🔥 COLOR REVERSE INTERPOLATION: Convert RGB to BGR for the YOLO engine calculations
+    bgr_img = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+    
+    st.subheader("📡 Core Live Feed Processing Matrix")
+    
+    # Run active inference engine using the corrected BGR frame
+    with st.spinner("Analyzing target frames..."):
+        results = model.predict(source=bgr_img, conf=conf_threshold)
+        
+        # Convert the bounding-box frame back to RGB so Streamlit colors render normally
+        annotated_img = cv2.cvtColor(results[0].plot(), cv2.COLOR_BGR2RGB)
+        
+    # Present the processed outputs side-by-side
     col1, col2 = st.columns(2)
-    
-    # ----------------------------------------------------
-    # PIPELINE A: MANUAL HEURISTIC EDGE MODEL
-    # ----------------------------------------------------
     with col1:
-        st.markdown("### 📡 PIPELINE ALPHA: HEURISTIC PROCESSING")
-        gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(gray, edge_threshold[0], edge_threshold[1])
-        st.image(edges, caption="Computed High-Frequency Structural Grid", width=380, clamp=True)
-        
-        edge_density = (np.sum(edges > 0) / edges.size) * 100
-        mean_brightness = np.mean(gray)
-        
-        m1, m2 = st.columns(2)
-        with m1: st.metric("STRUCTURAL DENSITY", f"{edge_density:.2f} %")
-        with m2: st.metric("LUMINANCE FACTOR", f"{mean_brightness:.1f} DB")
-
-    # ----------------------------------------------------
-    # PIPELINE B: AI NEURAL DEEP LEARNING MODEL
-    # ----------------------------------------------------
+        st.image(image, caption="Raw Feed Input", use_column_width=True)
     with col2:
-        st.markdown("### 🤖 PIPELINE BETA: NEURAL AGENT INFERENCE")
-        cv2.imwrite("temp_uploaded_recon.jpg", raw_img)
-        model = YOLO("yolov8n.pt")
-        results = model("temp_uploaded_recon.jpg", device='cpu', conf=confidence_slider, imgsz=80)
-        annotated_frame = results[0].plot()
-        
-        rgb_annotated = cv2.cvtColor(
-            annotated_frame, 
-            cv2.COLOR_BGR2RGB
-        )
-        # Renders boxes around EVERYTHING detected
-        st.image(rgb_annotated, caption="Neural Target Recognition Overlay", width=380)
-        
-        # Extract numeric class mapping for all objects present in the current frame
-        detected_classes = [int(box.cls[0]) for box in results[0].boxes]
-        
-        # Target Defense Signatures from COCO Dataset:
-        # 2 = car, 4 = airplane, 7 = truck, 8 = boat
-        defense_classes = {2, 4, 7, 8}
-        
-        # Filter down to catch active tactical matches
-        active_threats = [cls for cls in detected_classes if cls in defense_classes]
-        
-        # Smart Alert Gate Routing
-        if len(active_threats) > 0:
-            st.markdown(f"<div style='background-color: #450a0a; border: 1px solid #ef4444; padding: 10px; border-radius: 4px; color: #f87171; font-weight: bold;'>🚨 ALARM: POSITIVE THREAT ATTRIBUTES REGISTERED ({len(active_threats)} Target Assets)</div>", unsafe_allow_html=True)
-        else:
-            st.markdown("<div style='background-color: #172554; border: 1px solid #3b82f6; padding: 10px; border-radius: 4px; color: #60a5fa;'>ℹ️ READOUT: FEED STABLE // Signature Matches Baseline Parameters</div>", unsafe_allow_html=True)
-
-    st.markdown("---")
-    
-    # ----------------------------------------------------
-    # NATIVE METRICS AND SIMULATED SIGINT GRAPHS
-    # ----------------------------------------------------
-    st.markdown("### 📊 NATIVE SENSOR SIGINT & REAL-TIME ANALYTICS")
-    
-    g_col1, g_col2 = st.columns(2)
-    
-    with g_col1:
-        st.markdown("#### 📡 Local Signal Spectrogram Metrics")
-        st.write("Dynamic variance distribution logs tracking structural anomalies:")
-        
-        base_noise = np.random.randn(20) * 5
-        edge_influence = np.linspace(edge_threshold[0]/10, edge_threshold[1]/5, 20)
-        simulated_telemetry_wave = np.abs(base_noise + edge_influence + (edge_density * 3))
-        
-        st.area_chart(simulated_telemetry_wave, height=180, use_container_width=True)
-
-    with g_col2:
-        st.markdown("#### 🚨 Tactical Processor Risk Distribution")
-        st.write("Simulated computational load across tactical logic threads:")
-        
-        st.write("Structural Signature Threat Index:")
-        st.progress(min(int(edge_density * 10), 100))
-        
-        st.write("Neural Engine Classification Load:")
-        st.progress(int(confidence_slider * 100))
-else:
-    st.info("📡 Tactical system link offline. Ingest aerial reconnaissance files to initialize live processing matrix.")
+        st.image(annotated_img, caption="Processed Network Tracking Out", use_column_width=True)
