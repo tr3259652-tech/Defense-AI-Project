@@ -22,7 +22,7 @@ st.markdown("""
             background-color: var(--bg-dark);
             color: white;
             font-family: var(--font-family);
-            overscroll-behavior-y: contain; /* 🔥 FIX: Stops mobile browsers from refreshing on scroll-up */
+            overscroll-behavior-y: contain;
         }
         #MainMenu, header, footer {visibility: hidden;}
         h1 {
@@ -71,11 +71,16 @@ st.markdown("""
             font-size: 1.1rem;
             letter-spacing: 1px;
         }
-        .stSlider, .stFileUploader, .stButton button {
+        .stSlider, .stFileUploader, .stButton button, .stRadio {
             background-color: rgba(255, 255, 255, 0.05) !important;
             border: 1px solid var(--main-cyan) !important;
             color: var(--main-cyan) !important;
             border-radius: 0 !important;
+        }
+        /* Custom styling to keep the radio button labels cyan */
+        div[data-testid="stRadio"] label {
+            color: var(--main-cyan) !important;
+            font-family: monospace !important;
         }
         .stButton button { text-transform: uppercase; width: 100%; }
         .success-text { color: #00ff00; font-weight: bold; }
@@ -126,10 +131,26 @@ with col_main:
     st.markdown("<div class='telemetry-frame'>", unsafe_allow_html=True)
     st.markdown("<div class='telemetry-header'>LIVE SATELLITE TELEMETRY // FEED</div>", unsafe_allow_html=True)
 
-    uploaded_file = st.file_uploader("Ingest Target Telemetry Imagery...", type=["jpg", "jpeg", "png"])
+    # 🔥 NEW FEATURE: Source Selector Matrix
+    source_mode = st.radio(
+        "SELECT DATA INGESTION MODE:",
+        ["📡 FILE UPLOADER", "📷 LIVE OPTICAL LENS (CAMERA)"],
+        horizontal=True
+    )
 
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
+    st.markdown("<br/>", unsafe_allow_html=True)
+
+    target_data = None
+
+    # Handle selection route
+    if source_mode == "📡 FILE UPLOADER":
+        target_data = st.file_uploader("Ingest Target Telemetry Imagery...", type=["jpg", "jpeg", "png"])
+    else:
+        # 🔥 Wakes up mobile hardware camera application naturally
+        target_data = st.camera_input("SCAN ACTIVE ENVIRONMENT TRACE...")
+
+    if target_data is not None:
+        image = Image.open(target_data)
         img_array = np.array(image)
 
         bgr_img = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
@@ -177,7 +198,7 @@ with col_sigint:
 
     st.markdown("<div class='sigint-panel'>", unsafe_allow_html=True)
     st.markdown("<div class='panel-header'>SIGINT SUMMARY</div>", unsafe_allow_html=True)
-    if uploaded_file is not None and detected_count > 0:
+    if target_data is not None and detected_count > 0:
         st.error("GROUND MOVEMENT DETECTED.")
         st.write(f"Inference Time: {results[0].speed['inference']:.1f}ms")
     else:
